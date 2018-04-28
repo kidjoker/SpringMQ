@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+
+	<context:component-scan base-package="cn.kidjoker.activeMQ.spring"/>
+	
+	<!-- JMS MQ连接工厂 -->
+	<bean id="jmsFactory" class="org.apache.activemq.pool.PooledConnectionFactory" destroy-method="stop">
+		<property name="connectionFactory">
+			<bean class="org.apache.activemq.ActiveMQConnectionFactory">
+				<property name="brokerURL">
+					<value>tcp://47.52.119.111:61616</value>
+				</property>
+			</bean>
+		</property>
+		<property name="maxConnections" value="100"></property>
+    </bean>
+    
+    <!-- 工厂缓存 -->
+    <bean id="cachingConnectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
+        <property name="targetConnectionFactory" ref="jmsFactory"/>
+        <property name="sessionCacheSize" value="1"/>
+    </bean>
+    
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+        <property name="connectionFactory" ref="cachingConnectionFactory"/>
+        <property name="messageConverter">
+            <bean class="org.springframework.jms.support.converter.SimpleMessageConverter"/>
+        </property>
+    </bean>
+    
+    <!-- MQ队列 -->
+    <bean id="queueTest" class="org.apache.activemq.command.ActiveMQQueue">
+        <constructor-arg name="name" value="spring-queue"/>
+    </bean>
+    
+    <!-- 队列监听器 -->
+    <bean id="queueListener" class="cn.kidjoker.activeMQ.spring.QueueListener"/>
+    
+    <!-- MQ主题 -->
+    <bean id="topicTest" class="org.apache.activemq.command.ActiveMQTopic">
+        <constructor-arg index="0" value="spring-topic"/>
+    </bean>
+    
+    <!-- 主题订阅者监听器 -->
+    <bean id="topic1Listener" class="cn.kidjoker.activeMQ.spring.Topic1Listener"/>
+    <bean id="topic2Listener" class="cn.kidjoker.activeMQ.spring.Topic2Listener"/>
+	
+	<!-- 队列连接实例容器 -->
+	<bean id="queueContainer" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+        <property name="connectionFactory" ref="cachingConnectionFactory"/>
+        <property name="destination" ref="queueTest"/>
+        <property name="messageListener" ref="queueListener"/>
+    </bean>
+    
+    <!-- 主题1连接实例容器 -->
+    <bean id="topic1Container" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+        <property name="connectionFactory" ref="cachingConnectionFactory"/>
+        <property name="destination" ref="topicTest"/>
+        <property name="messageListener" ref="topic1Listener"/>
+    </bean>
+    
+    <!-- 主题2连接实例容器 -->
+    <bean id="topic2Container" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+        <property name="connectionFactory" ref="cachingConnectionFactory"/>
+        <property name="destination" ref="topicTest"/>
+        <property name="messageListener" ref="topic2Listener"/>
+    </bean>
+
+</beans>	
